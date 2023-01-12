@@ -1,2 +1,2 @@
-# maelstrom-staging
-Staging repo for the maelstrom genetic programming framework
+# maelstrom
+Island-model competitive co-evolution using genetic programming

@@ -1,0 +1,3 @@
+[submodule "snake_eyes"]
+	path = snake_eyes
+	url = git@github.com:DeaconSeals/snake_eyes.git

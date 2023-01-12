@@ -1,0 +1,14 @@
+/test-env*
+/__pycache__*
+*.pyo
+*.pyc
+*~
+*.gif
+*.prof
+/scratchpad*
+/logs/debug*
+/.ipynb_checkpoints*
+Pipfile.lock
+*rawData.json
+*localTournamentResults.json
+*competitors/
