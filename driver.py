@@ -4,8 +4,6 @@ from population import GeneticProgrammingPopulation
 from primitives import *
 from competition import *
 from findChampions import localTournaments
-from clusterIsland import ClusterGeneticProgrammingIsland
-from clusterCompetition import *
 
 
 import math
