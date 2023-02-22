@@ -6,7 +6,8 @@ import itertools
 class GeneticTree:
 	primitives = dict()
 	transitives = dict()
-	DEBUG = False
+	literal_initializers = dict()
+	DEBUG = True
 	
 	'''
 	Defines a decorator that can be used to conviently define primitives. Primitives have the notion of RPG-style
@@ -22,7 +23,7 @@ class GeneticTree:
 	in Sean's implementation.
 	'''
 	@classmethod
-	def declarePrimitive(cls, roles, output_type, input_types, transitive = False):
+	def declarePrimitive(cls, roles, output_type, input_types, *args, transitive = False, literal_init = False, **kwargs):
 		if isinstance(roles, str):
 			roles = roles, # turns the string into a single-element tuple
 		def addPrimitive(func):
@@ -30,10 +31,14 @@ class GeneticTree:
 				if role not in cls.primitives:
 					cls.primitives[role] = set()
 					cls.transitives[role] = set()
+					cls.literal_initializers[role] = dict()
 				cls.primitives[role].add((func, output_type, input_types))
 				if transitive and len(set(input_types)) == 1:
 					cls.transitives[role].add((func, output_type, input_types))
-				if cls.DEBUG: print(f"importing primitive '{func.__name__}' of type {output_type} for role '{role}'")
+				if literal_init:
+					key = (func.__name__, output_type, input_types)
+					cls.literal_initializers[role][key] = (args, kwargs)
+				if cls.DEBUG: print(f"importing primitive '{func.__name__}' of type {output_type} for role '{role}'", func)
 			return func
 		return addPrimitive
 
@@ -43,6 +48,7 @@ class GeneticTree:
 	'''
 	def __init__(self, roles, output_type):
 		self.primitiveSet = set()
+		self.init_dict = dict()
 		if isinstance(roles, str):
 			roles = roles, # turns the string into a single-element tuple
 		self.roles = roles
@@ -51,6 +57,7 @@ class GeneticTree:
 				print(f"encountered unknown role: {role}")
 			else:
 				self.primitiveSet |= GeneticTree.primitives[role]
+				self.init_dict.update(GeneticTree.literal_initializers[role])
 		assert len(self.primitiveSet) > 0, "No valid roles used in tree declaration"
 		self.root = Node(output_type)
 		self.branchingFactor = branchingFactor = max([len(primitive[2]) for primitive in self.primitiveSet])
@@ -59,6 +66,7 @@ class GeneticTree:
 		self.hardLimit = 0
 		self.depth = 0
 		self.size = 0
+		self.func = None
 
 	# Performs tree initialization in the GP sense to the calling tree object
 	def initialize(self, depth = 1, hardLimit = 0, grow = False, leafProb = 0.5, full = False, **kwargs):
@@ -71,11 +79,12 @@ class GeneticTree:
 			self.hardLimit = depth*2
 		else:
 			self.hardLimit = hardLimit
-		self.root.initialize(**kwargs)
+		self.root.initialize(self.init_dict)
 		self.nodeTags = self.root.getTags(self.branchingFactor)
 		self.depth = math.ceil(math.log(max(list(self.nodeTags.keys())), self.branchingFactor))
 		self.size = len(self.nodeTags)
 		self.string = self.printTree()
+		self.func = eval(''.join(['lambda context: ', self.tree]))
 
 	# Full initialization method
 	def full(self, depth = 1):
@@ -87,7 +96,7 @@ class GeneticTree:
 
 	# Execute/evaluate the calling tree
 	def execute(self, context):
-		return self.root.execute(context)
+		return self.func(context)
 
 	# Return a copy of the calling tree
 	def copy(self):
@@ -129,9 +138,9 @@ class GeneticTree:
 		self.root.assignAtTag(localTag, mate.root.findTag(mateTag, mate.branchingFactor).copy(), self.branchingFactor)
 		self.initialize(self.depthLimit, self.hardLimit)
 
-	# Returns a string representation of the calling tree for debugging purposes
+	# Returns a string representation of the expression encoded by the GP tree
 	def printTree(self):
-		return repr(self.root.printTree())
+		return self.root.printTree()
 
 	def toDict(self):
 		return {'roles': self.roles, 'output_type': self.root.type, 'depthLimit': self.depthLimit, 'hardLimit': self.hardLimit, 'root': self.root.toDict()}
@@ -143,61 +152,6 @@ class GeneticTree:
 		genotype.initialize(_dict['depthLimit'], _dict['hardLimit'])
 		return genotype
 
-	# special brute-force methods (use with caution)
-	@classmethod
-	def bruteForce(cls, roles, output_type, depth):
-		memory = dict()
-		primitive_set = set()
-		transitive_set = set()
-		for role in roles:
-			if role not in cls.primitives:
-				print(f"encountered unknown role: {role}")
-			else:
-				primitive_set |= cls.primitives[role]
-			
-			if role not in cls.transitives:
-				print(f"encountered unknown role: {role}")
-			else:
-				transitive_set |= cls.transitives[role]
-		
-		assert len(primitive_set) > 0, "No valid roles used in tree declaration"
-		return [cls.enumerate(primitive_set, transitive_set, output_type, i, memory) for i in range(depth+1)]
-
-	@classmethod
-	def enumerate(cls, primitive_set, transitive_set, output_type, depth, memory = dict()):
-		# TODO: Fix that this only considers uniform balanced trees
-		key = (output_type, depth)
-		if key in memory:
-			return memory[key]
-		elif depth <= 0:
-			options = [primitive for primitive in primitive_set if primitive[1] == output_type and primitive[2] == ()]
-			results = list()
-			for primitive in options:
-				results.append(Node(output_type))
-				results[-1].func = primitive[0]
-		else:
-			options = [primitive for primitive in primitive_set if primitive[1] == output_type and primitive[2] != ()]
-			results = list()
-			for option in options:
-				primitive, _, children_types = option
-				if option in transitive_set:
-					children_subtrees = cls.enumerate(primitive_set, transitive_set, children_types[0], depth-1, memory)
-					for subtree_permutation in itertools.combinations_with_replacement(children_subtrees, len(children_types)):
-						results.append(Node(output_type))
-						results[-1].func = primitive
-						results[-1].children = list(subtree_permutation)
-				else:
-					children_subtrees = list()
-					for child_type in children_types:
-						children_subtrees.append(cls.enumerate(primitive_set, transitive_set, child_type, depth-1, memory))
-					for subtree_permutation in itertools.product(*children_subtrees):
-						results.append(Node(output_type))
-						results[-1].func = primitive
-						results[-1].children = list(subtree_permutation)
-
-		memory[key] = results
-		return results
-
 
 '''General-purpose strong-typed GP node class'''
 class Node:
@@ -206,17 +160,14 @@ class Node:
 		self.func = None # stores an executable function object
 		self.children = list()
 		self.value = None
-		self.initialized = False
 
-	def initialize(self, **context):
-		if not self.initialized:
-			try:
-				self.execute(context)
-			except:
-				pass
-			self.initialized = True
+	def initialize(self, init_dict):
+		key = (self.func.__name__, self.type, tuple([child.type for child in self.children]))
+		if self.value == None and key in init_dict:
+			args, kwargs = init_dict[key]
+			self.value = self.func(*args, **kwargs)
 		for child in self.children:
-			child.initialize(**context)
+			child.initialize(init_dict)
 
 	# Accepts the list of available primitives and filters into leaf and internal primitives of acceptable type
 	def filterTypePrimitives(self, primitives):
@@ -299,9 +250,8 @@ class Node:
 
 
 	# Execute/evaluate the subtree of the calling node as root
-	def execute(self, context):
-		self.initialized = True
-		return self.func(self, self.children, context)
+	# def execute(self, context):
+	# 	return self.func(self, self.children, context)
 
 	# Return a copy of the subtree of the calling node
 	def copy(self):
@@ -364,13 +314,21 @@ class Node:
 	# Returns a string representation of the subtree of the calling node for debugging purposes
 	def printTree(self):
 		if self.value is not None:
-			name = repr(self.value)
+			name = f'{self.value}'
 		else:
 			name = self.func.__name__
-		if not self.children:
+		if self.value is not None and not self.children:
 			return name
+		elif not self.children:
+			return f'{name}(context)'
 		else:
-			return (name, tuple([child.printTree() for child in self.children]))
+			child_strings = list()
+			num_children = len(self.children)
+			for i in range(num_children):
+				child_strings.append(self.children[i].printTree())
+				if i < num_children-1:
+					child_strings.append(',')
+			return f'{name}({"".join(child_strings)})'
 
 	def toDict(self):
 		return {'func': self.func.__name__, 'type': self.type, 'value': self.value, 'children': [child.toDict() for child in self.children]}

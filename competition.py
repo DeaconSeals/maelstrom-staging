@@ -55,6 +55,7 @@ def evaluate(predator = None, prey = None, world_kwargs=None):
 	if predator == None:
 		predator = GeneticTree((PREDATOR, GENERAL), ANGLE)
 		predator.root.func = angle_to_prey
+		predator.initialize()
 	if prey == None:
 		prey = GeneticTree((PREY, GENERAL), ANGLE)
 		
@@ -65,6 +66,7 @@ def evaluate(predator = None, prey = None, world_kwargs=None):
 		prey.root.children[1].children = [Node(DISTANCE), Node(DISTANCE)]
 		prey.root.children[1].children[0].func = distance_to_opponent
 		prey.root.children[1].children[1].func = distance_to_opponent
+		prey.initialize()
 
 	while not termination:
 		if predator == None:
