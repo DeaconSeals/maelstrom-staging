@@ -7,7 +7,8 @@ class GeneticTree:
 	primitives = dict()
 	transitives = dict()
 	literal_initializers = dict()
-	DEBUG = True
+	DEBUG = False
+	local = dict()
 	
 	'''
 	Defines a decorator that can be used to conviently define primitives. Primitives have the notion of RPG-style
@@ -32,7 +33,9 @@ class GeneticTree:
 					cls.primitives[role] = set()
 					cls.transitives[role] = set()
 					cls.literal_initializers[role] = dict()
+					cls.local[role] = dict()
 				cls.primitives[role].add((func, output_type, input_types))
+				cls.local[role][func.__name__] = func
 				if transitive and len(set(input_types)) == 1:
 					cls.transitives[role].add((func, output_type, input_types))
 				if literal_init:
@@ -49,15 +52,17 @@ class GeneticTree:
 	def __init__(self, roles, output_type):
 		self.primitiveSet = set()
 		self.init_dict = dict()
+		self.local = dict()
 		if isinstance(roles, str):
 			roles = roles, # turns the string into a single-element tuple
 		self.roles = roles
 		for role in self.roles:
-			if role not in GeneticTree.primitives:
+			if role not in self.__class__.primitives:
 				print(f"encountered unknown role: {role}")
 			else:
-				self.primitiveSet |= GeneticTree.primitives[role]
-				self.init_dict.update(GeneticTree.literal_initializers[role])
+				self.primitiveSet |= self.__class__.primitives[role]
+				self.init_dict.update(self.__class__.literal_initializers[role])
+				self.local.update(self.__class__.local[role])
 		assert len(self.primitiveSet) > 0, "No valid roles used in tree declaration"
 		self.root = Node(output_type)
 		self.branchingFactor = branchingFactor = max([len(primitive[2]) for primitive in self.primitiveSet])
@@ -84,7 +89,16 @@ class GeneticTree:
 		self.depth = math.ceil(math.log(max(list(self.nodeTags.keys())), self.branchingFactor))
 		self.size = len(self.nodeTags)
 		self.string = self.printTree()
-		self.func = eval(''.join(['lambda context: ', self.tree]))
+		# self.build()
+
+	def build(self):
+		local = dict()
+		for role in self.roles:
+			if role not in self.__class__.primitives:
+				print(f"encountered unknown role: {role}")
+			else:
+				local.update(self.__class__.local[role])
+		self.func = eval(''.join(['lambda context: ', self.string]), local)
 
 	# Full initialization method
 	def full(self, depth = 1):
@@ -96,11 +110,13 @@ class GeneticTree:
 
 	# Execute/evaluate the calling tree
 	def execute(self, context):
+		if self.func is None:
+			self.build()
 		return self.func(context)
 
 	# Return a copy of the calling tree
 	def copy(self):
-		clone = GeneticTree(self.roles, self.root.type)
+		clone = self.__class__(self.roles, self.root.type)
 		clone.root = self.root.copy()
 		clone.initialize(self.depthLimit, self.hardLimit)
 		return clone
