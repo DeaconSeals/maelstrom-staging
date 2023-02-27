@@ -100,6 +100,11 @@ class GeneticTree:
 				local.update(self.__class__.local[role])
 		self.func = eval(''.join(['lambda context: ', self.string]), local)
 
+	def clean(self):
+		if self.func is not None:
+			del self.func
+		self.func = None
+
 	# Full initialization method
 	def full(self, depth = 1):
 		self.root.full(self.primitiveSet, depth-1)

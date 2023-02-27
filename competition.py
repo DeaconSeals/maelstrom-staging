@@ -139,9 +139,9 @@ def evaluateMatches(predators: list, prey: list, matches: list, executor = None,
 
 	results = [None for _ in range(len(matches))]
 	for idx, _ in matches:
-		predators[idx].genotype.func = None
+		predators[idx].genotype.clean()
 	for _, idx in matches:
-		prey[idx].genotype.func = None
+		prey[idx].genotype.clean()
 	tasks = [unorderedWrapper(match_id, evaluate, predators[match[0]].genotype, prey[match[1]].genotype, world_kwargs) for match_id, match in enumerate(matches)]
 	chunks_per_processor = 10
 	chunksize = max(1, min(max_sequence, len(tasks))//(cores*chunks_per_processor))

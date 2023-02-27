@@ -252,4 +252,8 @@ class GeneticProgrammingPopulation:
 				print(f"unknown survival selection parameter '{method}' defaulting to truncation")
 			return truncation(self.population, n)
 
-
+	def build(self):
+		[ind.build() for individual in self.population]
+		
+	def clean(self):
+		[ind.clean() for individual in self.population]

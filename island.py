@@ -19,12 +19,6 @@ class GeneticProgrammingIsland:
 		self.evaluationParameters = evaluationkwargs
 		
 		self.log = dict()
-		# if evalPool is None:
-		# 	if cores is None:
-		# 		cores = min(32, multiprocessing.cpu_count())
-		# 	self.evalPool = multiprocessing.Pool(cores)
-		# else:
-		# 	self.evalPool = evalPool
 
 		if cores is None:
 			cores = min(32, multiprocessing.cpu_count())
@@ -109,4 +103,8 @@ class GeneticProgrammingIsland:
 					pbar.update(self.evals-evals_old)
 		return self #self.log
 
-
+	def build(self):
+		[population.build() for population in self.populations.values()]
+		
+	def clean(self):
+		[population.clean() for population in self.populations.values()]
