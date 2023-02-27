@@ -10,3 +10,9 @@ class GeneticProgrammingIndividual:
 	
 	def copy(self):
 		return GeneticProgrammingIndividual(self.genotype.copy())
+
+	def build(self):
+		self.genotype.build()
+
+	def clean(self):
+		self.genotype.clean()

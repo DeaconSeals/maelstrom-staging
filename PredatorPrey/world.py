@@ -43,18 +43,21 @@ class World:
         # return math.dist(self.predator, self.prey)
         
     # Calculate the resultant x,y coordinates based on input coordinates, angle of movement, and magnitude of movement
-    def update_point(self, x, y, angle, distance):
+    @staticmethod
+    def update_point(x, y, angle, distance):
         x += math.cos(angle) * distance
         y += math.sin(angle) * distance
         return x, y
 
-    def cartesian_to_polar(self, x, y):
+    @staticmethod
+    def cartesian_to_polar(x, y):
         # r = math.sqrt(x**2 + y**2)
         # angle = math.atan2(y, x)
         # return r, angle
         return cmath.polar(complex(x, y))
 
-    def polar_to_cartesian(self, r, angle):
+    @staticmethod
+    def polar_to_cartesian(r, angle):
         x = r * math.cos(angle)
         y = r * math.sin(angle)
         return x, y
@@ -66,5 +69,6 @@ class World:
         return self.polar_to_cartesian(r, angle), (r, angle)
 
     # add two angles in radians and bound that to [0, 2*pi)
-    def add_angles(self, angle_1, angle_2):
+    @staticmethod
+    def add_angles(angle_1, angle_2):
         return math.fmod(angle_1 + angle_2 + 2*math.pi, 2*math.pi)

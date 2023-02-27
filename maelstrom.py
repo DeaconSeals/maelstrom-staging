@@ -90,32 +90,11 @@ class Maelstrom():
 
 		for key in self.islands:
 			self.log[key] = self.islands[key].log
-		return self #{key:island.log for key, island in self.islands.items()}
-
-	# # Maelstrom-level selection is only intended for gathering champions for comparison
-	# def select(self, n, method = "best", k = 5, merge = False, numInitial = None):
-	# 	champions = list()
-	# 	islandKeys = [key for key in self.islands]
-	# 	for key in islandKeys:
-	# 		if numInitial:
-	# 			champions.append(self.islands[key].select(numInitial, method, k))
-	# 		else:
-	# 			champions.append(self.islands[key].select(n, method, k))
-
-	# 	if merge:
-	# 		mergedChampions = dict()
-	# 		for champion in champions:
-	# 			for populationKey in champion:
-	# 				if populationKey not in mergedChampions:
-	# 					mergedChampions[populationKey] = GeneticProgrammingPopulation(survivalSelection="truncation", popSize=n, numChildren=0, roles=[], outputType='', depthLimit=1)
-	# 				mergedChampions[populationKey].population.extend(champion[populationKey])
-	# 		return mergedChampions
-	# 	else:
-	# 		for championIndex in range(len(champions)):
-	# 			for populationKey in champions[championIndex]:
-	# 				tempPopulation = GeneticProgrammingPopulation(survivalSelection="truncation", popSize=n, numChildren=0, roles=[], outputType='', depthLimit=1)
-	# 				tempPopulation.population = champions[championIndex][populationKey]
-	# 				champions[championIndex][populationKey] = tempPopulation
-	# 		return champions
+		return self
 
 
+	def build(self):
+		[island.build() for island in self.islands.values()]
+		
+	def clean(self):
+		[island.clean() for island in self.islands.values()]

@@ -55,6 +55,9 @@ def evaluate(predator = None, prey = None, world_kwargs=None):
 	if predator == None:
 		predator = GeneticTree((PREDATOR, GENERAL), ANGLE)
 		predator.root.func = angle_to_prey
+		predator.initialize()
+	else:
+		predator.build()
 	if prey == None:
 		prey = GeneticTree((PREY, GENERAL), ANGLE)
 		
@@ -65,6 +68,9 @@ def evaluate(predator = None, prey = None, world_kwargs=None):
 		prey.root.children[1].children = [Node(DISTANCE), Node(DISTANCE)]
 		prey.root.children[1].children[0].func = distance_to_opponent
 		prey.root.children[1].children[1].func = distance_to_opponent
+		prey.initialize()
+	else:
+		prey.build()
 
 	while not termination:
 		if predator == None:
@@ -132,6 +138,10 @@ def evaluateMatches(predators: list, prey: list, matches: list, executor = None,
 	cores = executor.__dict__['_processes']
 
 	results = [None for _ in range(len(matches))]
+	for idx, _ in matches:
+		predators[idx].genotype.clean()
+	for _, idx in matches:
+		prey[idx].genotype.clean()
 	tasks = [unorderedWrapper(match_id, evaluate, predators[match[0]].genotype, prey[match[1]].genotype, world_kwargs) for match_id, match in enumerate(matches)]
 	chunks_per_processor = 10
 	chunksize = max(1, min(max_sequence, len(tasks))//(cores*chunks_per_processor))
@@ -309,14 +319,6 @@ def completeEvaluations(predators: GeneticProgrammingPopulation, prey: GeneticPr
 	return gatherData(predators, prey), evals
 
 
-# Play the two best agents (unofficially deprecated)
-def exhibition(predators: GeneticProgrammingPopulation, prey: GeneticProgrammingPopulation):
-	bestPredator = max([predator.fitness for predator in predators.population])
-	bestPredator = random.choice([predator for predator in predators.population if predator.fitness == bestPredator])
-	bestPrey = max([preyIndividual.fitness for preyIndividual in prey.population])
-	bestPrey = random.choice([preyIndividual for preyIndividual in prey.population if preyIndividual.fitness == bestPrey])
-	return evaluate(bestPredator.genotype, bestPrey.genotype)
-
 # def evaluateWrapper(inputs):
 # 	predator, prey, world_kwargs = inputs
 # 	results = evaluate(predator, prey, world_kwargs)
@@ -334,6 +336,10 @@ def evaluateGenes(predators: list, prey: list, matches: list, cores = None, worl
 		cores = executor.__dict__['_processes']
 
 	results = [None for _ in range(len(matches))]
+	for indPredator in predators:
+		indPredator.func = None
+	for indPrey in prey:
+		indPrey.func = None
 	tasks = [unorderedWrapper(match_id, evaluate, predators[match[0]], prey[match[1]], world_kwargs) for match_id, match in enumerate(matches)]
 	chunks_per_processor = 10
 	chunksize = max(1, min(max_sequence, len(tasks))//(cores*chunks_per_processor))
