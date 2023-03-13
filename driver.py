@@ -1,6 +1,6 @@
 from maelstrom import Maelstrom
-from island import GeneticProgrammingIsland
-from population import GeneticProgrammingPopulation
+from maelstrom.island import GeneticProgrammingIsland
+from maelstrom.population import GeneticProgrammingPopulation
 from primitives import *
 from competition import *
 from findChampions import localTournaments
@@ -75,100 +75,122 @@ from tqdm.contrib.concurrent import process_map
 
 
 def main():
-	argParser = ArgumentParser(description="Maelstrom Predator Prey Experiment Driver",
-							epilog="Example: driver.py "
-							"--config configs/default.cfg")
-	argParser.add_argument('--config', type=str, default='configs/default.cfg', help='Configuration file for experiment parameters')
-	args = argParser.parse_args()
+    argParser = ArgumentParser(
+        description="Maelstrom Predator Prey Experiment Driver",
+        epilog="Example: driver.py " "--config configs/default.cfg",
+    )
+    argParser.add_argument(
+        "--config",
+        type=str,
+        default="configs/default.cfg",
+        help="Configuration file for experiment parameters",
+    )
+    args = argParser.parse_args()
 
-	config = readConfig(args.config, globals(), locals())
-	# print(config.keys())
-	# for section in config:
-	# 	print(section, config[section])
+    config = readConfig(args.config, globals(), locals())
+    # print(config.keys())
+    # for section in config:
+    # 	print(section, config[section])
 
+    random.seed(42)
 
-	random.seed(42)
-	
-	# if config['GENERAL'].get('analysis'):
-	# 	analyze()
-	# 	return
-	# if config['GENERAL'].get('default_test'):
-	# 	print("Testing baseline controllers")
-	# 	_, _, _, _, world = evaluate()
-	# 	# render_world(world=world, name = "test", log_path = "logs")
-	# 	return
+    # if config['GENERAL'].get('analysis'):
+    # 	analyze()
+    # 	return
+    # if config['GENERAL'].get('default_test'):
+    # 	print("Testing baseline controllers")
+    # 	_, _, _, _, world = evaluate()
+    # 	# render_world(world=world, name = "test", log_path = "logs")
+    # 	return
 
-	# create directory for experiment results
-	experimentDir = Path(config['GENERAL']['logpath'], config['GENERAL']['experimentName'], strftime('%Y-%m-%d-%H-%M', localtime()))
-	experimentDir.mkdir(parents=True, exist_ok = True)
+    # create directory for experiment results
+    experimentDir = Path(
+        config["GENERAL"]["logpath"],
+        config["GENERAL"]["experimentName"],
+        strftime("%Y-%m-%d-%H-%M", localtime()),
+    )
+    experimentDir.mkdir(parents=True, exist_ok=True)
 
-	# copy config file to experiment directory
-	with open(args.config) as originalConfig:
-		with Path(experimentDir, 'config.cfg').open('w') as copyConfig:
-			[copyConfig.write(line) for line in originalConfig]
+    # copy config file to experiment directory
+    with open(args.config) as originalConfig:
+        with Path(experimentDir, "config.cfg").open("w") as copyConfig:
+            [copyConfig.write(line) for line in originalConfig]
 
-	experimentLogs = list()
-	experimentChampions = list()
+    experimentLogs = list()
+    experimentChampions = list()
 
-	# champions = {"predators": GeneticProgrammingPopulation(**config['predators']), "prey": GeneticProgrammingPopulation(**config['prey'])}
-	if config.get('MAELSTROM'):
-		maelstrom = True
-		evolverClass = config['GENERAL'].get('evolverClass', Maelstrom)
-		configKeyword = 'MAELSTROM'
-	else:
-		maelstrom = False
-		evolverClass = config['GENERAL'].get('evolverClass', GeneticProgrammingIsland)
-		configKeyword = 'ISLAND'
+    # champions = {"predators": GeneticProgrammingPopulation(**config['predators']), "prey": GeneticProgrammingPopulation(**config['prey'])}
+    if config.get("MAELSTROM"):
+        maelstrom = True
+        evolverClass = config["GENERAL"].get("evolverClass", Maelstrom)
+        configKeyword = "MAELSTROM"
+    else:
+        maelstrom = False
+        evolverClass = config["GENERAL"].get("evolverClass", GeneticProgrammingIsland)
+        configKeyword = "ISLAND"
 
-	if config['GENERAL'].get('parallelizeRuns'):
-		parallel_runs = min(config['GENERAL']['runs'], multiprocessing.cpu_count())
+    if config["GENERAL"].get("parallelizeRuns"):
+        parallel_runs = min(config["GENERAL"]["runs"], multiprocessing.cpu_count())
 
-		if parallel_runs <= (multiprocessing.cpu_count()*0.25): # allow for maximum of 125% overprovisioning of worker cores
-			cores = 1 + (multiprocessing.cpu_count()//parallel_runs)
-		else:
-			cores = min(1, (multiprocessing.cpu_count()//parallel_runs))
+        if parallel_runs <= (
+            multiprocessing.cpu_count() * 0.25
+        ):  # allow for maximum of 125% overprovisioning of worker cores
+            cores = 1 + (multiprocessing.cpu_count() // parallel_runs)
+        else:
+            cores = min(1, (multiprocessing.cpu_count() // parallel_runs))
 
-		evolvers = list()
-		for run in trange(config['GENERAL']['runs'], unit=' init', position=0):
-			evolvers.append(evolverClass(**config[configKeyword], **config, cores = cores, position=run+1))
-		runFunc = evolverClass.run
-		
-		with concurrent.futures.ProcessPoolExecutor(parallel_runs) as runPool:
-			# print(runFunc, evolvers)
-			evolutionRuns = [run for run in runPool.map(runFunc, evolvers)]
-		experimentLogs = [run.log for run in evolutionRuns]
-		experimentChampions = list()
-		for run in evolutionRuns:
-			runChampions = dict()
-			for species, population in run.champions.items():
-				runChampions[species] = [gene.toDict() for key, gene in population.items()]
-			experimentChampions.append(runChampions)
-		del evolvers
-		del evolutionRuns
+        evolvers = list()
+        for run in trange(config["GENERAL"]["runs"], unit=" init", position=0):
+            evolvers.append(
+                evolverClass(
+                    **config[configKeyword], **config, cores=cores, position=run + 1
+                )
+            )
+        runFunc = evolverClass.run
 
-	else:
-		for run in trange(config['GENERAL']['runs'], unit=' run'):
-			evolver = evolverClass(**config[configKeyword], **config)
-			evolver.run()
-			experimentLogs.append(evolver.log)
-			runChampions = dict()
-			for species, population in evolver.champions.items():
-				runChampions[species] = [gene.toDict() for key, gene in population.items()]
-			experimentChampions.append(runChampions)
-	
-	with gzip.open(Path(experimentDir, 'evolutionLog.json.gz'), mode='wt') as file:
-		json.dump(experimentLogs, file, separators=(',', ':'))
-	
-	competitorsDir = Path(experimentDir, 'competitors')
-	competitorsDir.mkdir(parents=True, exist_ok = True)
-	for run, competitors in enumerate(experimentChampions):
-		with gzip.open(Path(competitorsDir, f'run{run}.json.gz'), mode='wt') as file:
-			json.dump(competitors, file, separators=(',', ':'))
+        with concurrent.futures.ProcessPoolExecutor(parallel_runs) as runPool:
+            # print(runFunc, evolvers)
+            evolutionRuns = [run for run in runPool.map(runFunc, evolvers)]
+        experimentLogs = [run.log for run in evolutionRuns]
+        experimentChampions = list()
+        for run in evolutionRuns:
+            runChampions = dict()
+            for species, population in run.champions.items():
+                runChampions[species] = [
+                    gene.toDict() for key, gene in population.items()
+                ]
+            experimentChampions.append(runChampions)
+        del evolvers
+        del evolutionRuns
 
-	if config['GENERAL'].get('findLocalChampions'):
-		print('Beginning champion tournament')
-		localTournaments(experimentDir, config['GENERAL']['finalChampions'], more_cores=False)
+    else:
+        for run in trange(config["GENERAL"]["runs"], unit=" run"):
+            evolver = evolverClass(**config[configKeyword], **config)
+            evolver.run()
+            experimentLogs.append(evolver.log)
+            runChampions = dict()
+            for species, population in evolver.champions.items():
+                runChampions[species] = [
+                    gene.toDict() for key, gene in population.items()
+                ]
+            experimentChampions.append(runChampions)
+
+    with gzip.open(Path(experimentDir, "evolutionLog.json.gz"), mode="wt") as file:
+        json.dump(experimentLogs, file, separators=(",", ":"))
+
+    competitorsDir = Path(experimentDir, "competitors")
+    competitorsDir.mkdir(parents=True, exist_ok=True)
+    for run, competitors in enumerate(experimentChampions):
+        with gzip.open(Path(competitorsDir, f"run{run}.json.gz"), mode="wt") as file:
+            json.dump(competitors, file, separators=(",", ":"))
+
+    if config["GENERAL"].get("findLocalChampions"):
+        print("Beginning champion tournament")
+        localTournaments(
+            experimentDir, config["GENERAL"]["finalChampions"], more_cores=False
+        )
+
 
 if __name__ == "__main__":
-	multiprocessing.set_start_method('spawn')
-	main()
+    multiprocessing.set_start_method("spawn")
+    main()

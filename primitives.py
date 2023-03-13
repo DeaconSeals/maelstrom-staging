@@ -1,5 +1,5 @@
 from PredatorPrey.world import World
-from genotype import *
+from maelstrom.genotype import *
 import math
 import random
 
@@ -8,6 +8,7 @@ PREY = "Prey"
 PREDATOR = "Predator"
 ANGLE = "Angle"
 DISTANCE = "Distance"
+
 
 @GeneticTree.declarePrimitive(PREDATOR, DISTANCE, ())
 def distance_to_centerPredator(context):
@@ -60,13 +61,17 @@ def distance_to_opponent(context):
 @GeneticTree.declarePrimitive(PREDATOR, ANGLE, ())
 def angle_to_prey(context):
     world: World = context["world"]
-    return math.atan2(world.prey[1] - world.predator[1], world.prey[0] - world.predator[0])
+    return math.atan2(
+        world.prey[1] - world.predator[1], world.prey[0] - world.predator[0]
+    )
 
 
 @GeneticTree.declarePrimitive(PREY, ANGLE, ())
 def angle_to_predator(context):
     world: World = context["world"]
-    return math.atan2(world.predator[1] - world.prey[1], world.predator[0] - world.prey[0])
+    return math.atan2(
+        world.predator[1] - world.prey[1], world.predator[0] - world.prey[0]
+    )
 
 
 @GeneticTree.declarePrimitive(GENERAL, ANGLE, ())
@@ -96,7 +101,7 @@ def flip_angle(angle):
     return World.add_angles(angle, math.pi)
 
 
-@GeneticTree.declarePrimitive(GENERAL, ANGLE, (ANGLE, ANGLE), transitive = True)
+@GeneticTree.declarePrimitive(GENERAL, ANGLE, (ANGLE, ANGLE), transitive=True)
 def add_angles(angle_1, angle_2):
     return World.add_angles(angle_1, angle_2)
 
@@ -106,18 +111,20 @@ def subtract_angles(angle_1, angle_2):
     return World.add_angles(angle_1, -angle_2)
 
 
-@GeneticTree.declarePrimitive(GENERAL, ANGLE, (ANGLE, ANGLE), transitive = True)
+@GeneticTree.declarePrimitive(GENERAL, ANGLE, (ANGLE, ANGLE), transitive=True)
 def average_angles(angle_1, angle_2):
-    return math.atan2((math.sin(angle_1) + math.sin(angle_2)) / 2,
-                      (math.cos(angle_1) + math.cos(angle_2)) / 2)
+    return math.atan2(
+        (math.sin(angle_1) + math.sin(angle_2)) / 2,
+        (math.cos(angle_1) + math.cos(angle_2)) / 2,
+    )
 
 
-@GeneticTree.declarePrimitive(GENERAL, ANGLE, (ANGLE, DISTANCE), transitive = True)
+@GeneticTree.declarePrimitive(GENERAL, ANGLE, (ANGLE, DISTANCE), transitive=True)
 def multiply_angle(angle, distance):
-    return math.fmod(angle * distance, 2*math.pi)
+    return math.fmod(angle * distance, 2 * math.pi)
 
 
-@GeneticTree.declarePrimitive(GENERAL, DISTANCE, (DISTANCE, DISTANCE), transitive = True)
+@GeneticTree.declarePrimitive(GENERAL, DISTANCE, (DISTANCE, DISTANCE), transitive=True)
 def add_distances(distance_1, distance_2):
     return distance_1 + distance_2
 
@@ -127,7 +134,7 @@ def subtract_distances(distance_1, distance_2):
     return distance_1 - distance_2
 
 
-@GeneticTree.declarePrimitive(GENERAL, DISTANCE, (DISTANCE, DISTANCE), transitive = True)
+@GeneticTree.declarePrimitive(GENERAL, DISTANCE, (DISTANCE, DISTANCE), transitive=True)
 def multiply_distances(distance_1, distance_2):
     return distance_1 * distance_2
 
@@ -146,13 +153,16 @@ def if_greater_than(distance_1, distance_2, angle_1, angle_2):
     else:
         return angle_2
 
-@GeneticTree.declarePrimitive(GENERAL, DISTANCE, (), 2, literal_init = True)
-def distance_const(maximum):
-    return random.random()*maximum
 
-@GeneticTree.declarePrimitive(GENERAL, ANGLE, (), 2*math.pi, literal_init = True)
+@GeneticTree.declarePrimitive(GENERAL, DISTANCE, (), 2, literal_init=True)
+def distance_const(maximum):
+    return random.random() * maximum
+
+
+@GeneticTree.declarePrimitive(GENERAL, ANGLE, (), 2 * math.pi, literal_init=True)
 def angle_const(maximum):
-    return random.random()*maximum
+    return random.random() * maximum
+
 
 def main():
     print(repr(GeneticTree.primitives))
@@ -160,6 +170,7 @@ def main():
     prey.full(5)
     predator = GeneticTree((PREDATOR, GENERAL), ANGLE)
     predator.grow(5)
+
 
 if __name__ == "__main__":
     main()
