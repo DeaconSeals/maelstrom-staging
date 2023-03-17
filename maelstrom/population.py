@@ -184,7 +184,7 @@ class GeneticProgrammingPopulation:
             bias = self.optional_params.get("overselection_bias", 0.8)
             partition = self.optional_params.get("overselection_partition", 10)
             return overselection(self.population, num_parents, bias, partition)
-        elif self.parent_selection != "uniform":
+        elif self.parent_selection == "uniform":
             return uniform_random(self.population, num_parents)
         else:
             raise NameError(
