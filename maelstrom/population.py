@@ -240,11 +240,11 @@ class GeneticProgrammingPopulation:
         Raises:
             NameError: If the survival selection method is unrecognized
         """
-        if self.survival_selection == "kTournament":
+        if self.survival_selection == "k_tournament":
             self.population = self.select_unique(
                 n=self.pop_size,
                 method="tournament",
-                k=self.optional_params["ksurvival"],
+                k=self.optional_params["k_survival"],
             )
         elif self.survival_selection == "FPS":
             self.population = self.select_unique(n=self.pop_size, method="FPS")
