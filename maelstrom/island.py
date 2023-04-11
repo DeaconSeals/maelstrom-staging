@@ -3,33 +3,39 @@ from tqdm.auto import tqdm
 import multiprocessing
 
 
-# General-purpose island class that contains and manages multiple populations
 # TODO: transition from parameters dictionary to clearer inputs with default values
 class GeneticProgrammingIsland:
-    # Initializes the island and populations based on input configuration parameters and evaluation function
+    """
+    General-purpose island class that contains and manages multiple populations
+    """
+
     def __init__(
         self,
         populations,
-        evaluationFunction,
-        evaluationkwargs=dict(),
-        evalPool=None,
+        evaluation_function,
+        evaluationkwargs={},
+        eval_pool=None,
         evaluations=None,
-        championsPerGeneration=0,
+        champions_per_generation=0,
         cores=None,
         position=None,
         **kwargs,
     ):
+        """
+        Initializes the island and populations based on input configuration
+        parameters and evaluation function
+        """
         # self.parameters = parameters
-        self.populations = dict()
-        self.generationCount = 0
+        self.populations = {}
+        self.generation_count = 0
         for name, config in populations.items():
             self.populations[name] = GeneticProgrammingPopulation(**kwargs[config])
-            self.populations[name].rampedHalfAndHalf()
-        self.evaluation = evaluationFunction
+            self.populations[name].ramped_half_and_half()
+        self.evaluation = evaluation_function
 
-        self.evaluationParameters = evaluationkwargs
+        self.evaluation_parameters = evaluationkwargs
 
-        self.log = dict()
+        self.log = {}
 
         if cores is None:
             cores = min(32, multiprocessing.cpu_count())
@@ -37,99 +43,141 @@ class GeneticProgrammingIsland:
         self.position = position
 
         # Fitness evaluations occur here
-        with multiprocessing.Pool(self.cores) as evalPool:
-            generationData, self.evals = self.evaluation(
-                **self.populations, executor=evalPool, **self.evaluationParameters
+        with multiprocessing.Pool(self.cores) as eval_pool:
+            generation_data, self.evals = self.evaluation(
+                **self.populations, executor=eval_pool, **self.evaluation_parameters
             )
-        for key in generationData:
-            self.log[key] = [generationData[key]]
+        for key in generation_data:
+            self.log[key] = [generation_data[key]]
 
-        self.championsPerGeneration = championsPerGeneration
+        self.champions_per_generation = champions_per_generation
 
         # identify champions for each species
-        self.champions = {key: dict() for key in self.populations}
+        self.champions = {key: {} for key in self.populations}
         for population in self.populations:
-            localChampions = self.select(
-                population, self.championsPerGeneration, method="best"
+            local_champions = self.select(
+                population, self.champions_per_generation, method="best"
             )
-            for individual in localChampions:
-                geneText = individual.genotype.printTree()
-                if geneText not in self.champions[population]:
-                    self.champions[population][geneText] = individual.genotype.copy()
+            for individual in local_champions:
+                gene_text = individual.genotype.print_tree()
+                if gene_text not in self.champions[population]:
+                    self.champions[population][gene_text] = individual.genotype.copy()
 
-        self.imports = dict()
-        self.evalLimit = evaluations
+        self.imports = {}
+        self.eval_limit = evaluations
 
     # Performs a single generation of evolution
-    def generation(self, evalPool=None):
-        self.generationCount += 1
+    def generation(self, eval_pool=None):
+        """
+        Performs a single generation of evolution
+
+        Args:
+            eval_pool (multiprocessing.Pool): Pool of processes to use for evaluation
+
+        Returns:
+            self
+        """
+        self.generation_count += 1
         for population in self.populations:
             if population in self.imports:
-                self.populations[population].generateChildren(self.imports[population])
+                self.populations[population].generate_children(self.imports[population])
             else:
-                self.populations[population].generateChildren()
+                self.populations[population].generate_children()
         self.imports.clear()
 
-        generationData, numEvals = self.evaluation(
-            **self.populations, executor=evalPool, **self.evaluationParameters
+        generation_data, num_evals = self.evaluation(
+            **self.populations, executor=eval_pool, **self.evaluation_parameters
         )
-        self.evals += numEvals
-        for key in generationData:
-            self.log[key].append(generationData[key])
+        self.evals += num_evals
+        for key in generation_data:
+            self.log[key].append(generation_data[key])
 
         for population in self.populations:
-            self.populations[population].selectSurvivors()
-            self.populations[population].updateHallOfFame()
+            self.populations[population].select_survivors()
+            self.populations[population].update_hall_of_fame()
 
             # identify champions for each species
-            localChampions = self.select(
-                population, self.championsPerGeneration, method="best"
+            local_champions = self.select(
+                population, self.champions_per_generation, method="best"
             )
-            for individual in localChampions:
-                geneText = individual.genotype.printTree()
-                if geneText not in self.champions[population]:
-                    self.champions[population][geneText] = individual.genotype.copy()
+            for individual in local_champions:
+                gene_text = individual.genotype.print_tree()
+                if gene_text not in self.champions[population]:
+                    self.champions[population][gene_text] = individual.genotype.copy()
 
         return self
 
     # Termination check
     def termination(self):
+        """
+        Checks if the island has reached termination criteria
+
+        Returns:
+            bool: True if termination criteria have been met, False otherwise
+        """
         stop = False
         for key in self.populations:
-            stop = stop or self.populations[key].checkTermination()
+            stop = stop or self.populations[key].check_termination()
             if stop:
                 break
-        return stop or (self.evalLimit is not None and self.evals >= self.evalLimit)
+        return stop or (self.eval_limit is not None and self.evals >= self.eval_limit)
 
     # Selection from populations
     def select(self, population, n, method="uniform", k=5):
-        chosen = self.populations[population].selectUnique(n, method, k)
+        """
+        Selects n individuals from the specified population
+
+        Args:
+            population: Name of the population to select from
+            n: Number of individuals to select
+            method: Selection method to use
+            k: Number of individuals to select from for tournament selection
+
+        Returns:
+            list: List of selected individuals
+        """
+
+        chosen = self.populations[population].select_unique(n, method, k)
         for index in range(len(chosen)):
             chosen[index] = chosen[index].copy()
         return chosen
 
     # Perfoms a single run of evolution until termination
     def run(self):
-        with multiprocessing.Pool(self.cores) as evalPool:
+        """
+        Performs a single run of evolution until termination
+
+        Returns:
+            self
+        """
+        with multiprocessing.Pool(self.cores) as eval_pool:
             with tqdm(
-                total=self.evalLimit, unit=" evals", position=self.position
+                total=self.eval_limit, unit=" evals", position=self.position
             ) as pbar:
                 pbar.set_description(
-                    f"COEA Generation {self.generationCount}", refresh=False
+                    f"COEA Generation {self.generation_count}", refresh=False
                 )
                 pbar.update(self.evals)
                 while not self.termination():
                     evals_old = self.evals
                     # print(f"Beginning generation: {generation}\tEvaluations: {self.evals}")
-                    self.generation(evalPool)
+                    self.generation(eval_pool)
                     pbar.set_description(
-                        f"COEA Generation {self.generationCount}", refresh=False
+                        f"COEA Generation {self.generation_count}", refresh=False
                     )
                     pbar.update(self.evals - evals_old)
         return self  # self.log
 
     def build(self):
-        [population.build() for population in self.populations.values()]
+        """
+        Builds the populations in the island
+        """
+        for population in self.populations.values():
+            population.build()
 
     def clean(self):
-        [population.clean() for population in self.populations.values()]
+        """
+        Cleans the populations in the island
+        """
+        for population in self.populations.values():
+            population.clean()

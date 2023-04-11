@@ -1,81 +1,105 @@
-from maelstrom.genotype import GeneticTree
-from maelstrom.individual import GeneticProgrammingIndividual
-
+"""
+General-purpose GP population class that contains and manages individuals
+"""
 import random
 import math
 import statistics
 from collections import OrderedDict
+from maelstrom.genotype import GeneticTree
+from maelstrom.individual import GeneticProgrammingIndividual
 
 
-# General-purpose GP population class that contains and manages individuals
 # TODO: transition from parameters dictionary to clearer inputs with default values
 class GeneticProgrammingPopulation:
+    """
+    General-purpose GP population class that contains and manages individuals
+    """
+
     def __init__(
         self,
-        popSize,
-        numChildren,
+        pop_size,
+        num_children,
         roles,
-        outputType,
-        depthLimit,
-        hardLimit=None,
-        depthMin=1,
+        output_type,
+        depth_limit,
+        hard_limit=None,
+        depth_min=1,
         evaluations=None,
-        parentSelection="uniform",
-        survivalSelection="truncation",
-        survivalStrategy="plus",
+        parent_selection="uniform",
+        survival_selection="truncation",
+        survival_strategy="plus",
         mutation=0.05,
         **kwargs,
     ):
-        self.population = list()
+        """
+        Initializes the population and individuals based on input configuration
+        parameters and evaluation function
+        """
+        self.population = []
         # self.parameters = parameters
-        self.popSize = popSize
-        self.numChildren = numChildren
+        self.pop_size = pop_size
+        self.num_children = num_children
         self.roles = roles
-        self.outputType = outputType
-        self.depthLimit = depthLimit
-        self.hardLimit = hardLimit if hardLimit is not None else self.depthLimit * 2
-        self.depthMin = depthMin
-        self.evalLimit = evaluations
+        self.output_type = output_type
+        self.depth_limit = depth_limit
+        self.hard_limit = hard_limit if hard_limit is not None else self.depth_limit * 2
+        self.depth_min = depth_min
+        self.eval_limit = evaluations
         self.evals = 0
-        self.parentSelection = parentSelection
-        self.survivalSelection = survivalSelection
-        self.survivalStrategy = survivalStrategy
+        self.parent_selection = parent_selection
+        self.survival_selection = survival_selection
+        self.survival_strategy = survival_strategy
         self.mutation = mutation
-        self.optionalParams = kwargs
-        self.hallOfFame = OrderedDict()
-        self.CIAO = list()
+        self.optional_params = kwargs
+        self.hall_of_fame = OrderedDict()
+        self.CIAO = []
 
-    def rampedHalfAndHalf(self, leafProb=0.5):
-        full = self.popSize // 2
-        grow = self.popSize - full
+    def ramped_half_and_half(self, leaf_prob=0.5):
+        """
+        Initializes the population with a ramped half-and-half method
+
+        Args:
+            leaf_prob: Probability of a leaf node when initializing a tree
+        """
+
+        full = self.pop_size // 2
         self.population = [
-            GeneticProgrammingIndividual(GeneticTree(self.roles, self.outputType))
-            for _ in range(self.popSize)
+            GeneticProgrammingIndividual(GeneticTree(self.roles, self.output_type))
+            for _ in range(self.pop_size)
         ]
 
         for index in range(len(self.population)):
             if index < full:
                 self.population[index].genotype.initialize(
-                    self.depthLimit, self.hardLimit, full=True
+                    self.depth_limit, self.hard_limit, full=True
                 )
             else:
                 self.population[index].genotype.initialize(
-                    self.depthMin + (index % (self.depthLimit + 1 - self.depthMin)),
-                    self.hardLimit,
+                    self.depth_min + (index % (self.depth_limit + 1 - self.depth_min)),
+                    self.hard_limit,
                     grow=True,
-                    leafProb=leafProb,
+                    leaf_prob=leaf_prob,
                 )
 
-    def selectParents(self, numParents=None):
-        if numParents == None:
-            numParents = self.numChildren
+    def select_parents(self, num_parents=None):
+        """
+        Selects parents for the next generation based on the parent selection method
+
+        Args:
+            numParents: Number of parents to select. Defaults to None.
+
+        Returns:
+            List of parents
+        """
+        if num_parents == None:
+            num_parents = self.num_children
 
         # Definitions of parent selection algorithms
         # Note: this can probably be cleaned up and segmented in a better way (maybe with the decorator approach used in genotype)
-        def uniformRandom(population, n):
+        def uniform_random(population, n):
             return random.choices(population=population, k=n)
 
-        def kTournament(population, n, k):
+        def k_tournament(population, n, k):
             candidates = [index for index in range(len(population))]
             winners = []
             for i in range(n):
@@ -93,7 +117,7 @@ class GeneticProgrammingPopulation:
                 winners.append(champion)
             return [population[parent] for parent in winners]
 
-        def fitnessProportionalSelection(population, n):
+        def fitness_proportional_selection(population, n):
             fitnesses = [individual.fitness for individual in population]
             offset = min(fitnesses)
             offset = min(0, offset)
@@ -102,7 +126,7 @@ class GeneticProgrammingPopulation:
                 weights = [fitness - offset + 0.001 for fitness in fitnesses]
             return random.choices(population=population, weights=weights, k=n)
 
-        def stochasticUniversalSampling(population, n):
+        def stochastic_universal_sampling(population, n):
             fitnesses = [individual.fitness for individual in population]
             offset = (
                 min(fitnesses) * 1.1
@@ -118,16 +142,16 @@ class GeneticProgrammingPopulation:
             for i in range(1, len(roulette)):
                 roulette[i] = roulette[i] + roulette[i - 1]
             roulette = [value / total for value in roulette]
-            parents = list()
-            rouletteArm = random.random()
-            arms = [math.fmod(rouletteArm + (i / n), 1.0) for i in range(n)]
+            parents = []
+            roulette_arm = random.random()
+            arms = [math.fmod(roulette_arm + (i / n), 1.0) for i in range(n)]
             arms.sort()
-            popIndex = 0
+            pop_index = 0
             for arm in arms:
-                if arm <= roulette[popIndex]:
-                    parents.append(population[popIndex])
+                if arm <= roulette[pop_index]:
+                    parents.append(population[pop_index])
                 else:
-                    popIndex += 1
+                    pop_index += 1
             random.shuffle(parents)
             return parents
 
@@ -138,7 +162,7 @@ class GeneticProgrammingPopulation:
             candidates = sorted(
                 population, key=lambda individual: individual.fitness, reverse=True
             )
-            parents = list()
+            parents = []
             for i in range(n):
                 if i <= elites and partition > 0:
                     parents.append(random.choice(candidates[:partition]))
@@ -148,107 +172,148 @@ class GeneticProgrammingPopulation:
             return parents
 
         # Actual selection execution
-        if self.parentSelection == "kTournament":
-            return kTournament(
-                self.population, numParents, self.optionalParams["kParent"]
+        if self.parent_selection == "k_tournament":
+            return k_tournament(
+                self.population, num_parents, self.optional_params["k_parent"]
             )
-        elif self.parentSelection == "FPS":
-            return fitnessProportionalSelection(self.population, numParents)
-        elif self.parentSelection == "SUS":
-            return stochasticUniversalSampling(self.population, numParents)
-        elif self.parentSelection == "overselection":
-            bias = self.optionalParams.get("overselectionBias", 0.8)
-            partition = self.optionalParams.get("overselectionPartition", 10)
-            return overselection(self.population, numParents, bias, partition)
-        elif self.parentSelection != "uniform":
-            return uniformRandom(self.population, numParents)
+        elif self.parent_selection == "FPS":
+            return fitness_proportional_selection(self.population, num_parents)
+        elif self.parent_selection == "SUS":
+            return stochastic_universal_sampling(self.population, num_parents)
+        elif self.parent_selection == "overselection":
+            bias = self.optional_params.get("overselection_bias", 0.8)
+            partition = self.optional_params.get("overselection_partition", 10)
+            return overselection(self.population, num_parents, bias, partition)
+        elif self.parent_selection == "uniform":
+            return uniform_random(self.population, num_parents)
         else:
             raise NameError(
-                f"unrecognized parent selection method: {self.parentSelection}"
+                f"unrecognized parent selection method: {self.parent_selection}"
             )
 
     # Generate children through the selection of parents, recombination or mutation of parents to form children, then the migration of children
     # into the primary population depending on survival strategy
     # TODO: generalize this so it relies on operations of the individual class instead of skipping that and working directly with the genotype
-    def generateChildren(self, imports=None):
+    def generate_children(self, imports=None):
+        """
+        Generates children for the next generation
+
+        Args:
+            imports: List of individuals to import into the population. Defaults to None.
+
+        Raises:
+            NameError: If the survival strategy is unrecognized
+        """
         if imports == None:
-            numParents = self.numChildren
+            num_parents = self.num_children
         else:
-            numParents = max(0, self.numChildren - len(imports))
-        parents = self.selectParents(numParents)
+            num_parents = max(0, self.num_children - len(imports))
+        parents = self.select_parents(num_parents)
         children = [parent.copy() for parent in parents]
         for i in range(len(children)):
             if random.random() <= self.mutation:
-                children[i].genotype.subtreeMutation()
+                children[i].genotype.subtree_mutation()
             else:
-                children[i].genotype.subtreeRecombination(
+                children[i].genotype.subtree_recombination(
                     children[(i + 1) % len(children)].genotype
                 )
-                while children[i].genotype.depth > self.hardLimit:
+                while children[i].genotype.depth > self.hard_limit:
                     children[i] = parents[i].copy()
-                    children[i].genotype.subtreeRecombination(
+                    children[i].genotype.subtree_recombination(
                         children[(i + 1) % len(children)].genotype
                     )
 
         if imports != None:
             children.extend([migrant.copy() for migrant in imports])
 
-        if self.survivalStrategy == "comma":
+        if self.survival_strategy == "comma":
             self.population = children
-        elif self.survivalStrategy == "plus":
+        elif self.survival_strategy == "plus":
             self.population.extend(children)
         else:
-            raise NameError(f"unrecognized survival strategy: {self.survivalStrategy}")
+            raise NameError(f"unrecognized survival strategy: {self.survival_strategy}")
 
-    def selectSurvivors(self):
-        if self.survivalSelection == "kTournament":
-            self.population = self.selectUnique(
-                n=self.popSize, method="tournament", k=self.optionalParams["ksurvival"]
+    def select_survivors(self):
+        """
+        Selects survivors for the next generation
+
+        Raises:
+            NameError: If the survival selection method is unrecognized
+        """
+        if self.survival_selection == "k_tournament":
+            self.population = self.select_unique(
+                n=self.pop_size,
+                method="tournament",
+                k=self.optional_params["k_survival"],
             )
-        elif self.survivalSelection == "FPS":
-            self.population = self.selectUnique(n=self.popSize, method="FPS")
-        elif self.survivalSelection == "uniform":
-            self.population = self.selectUnique(n=self.popSize, method="uniform")
-        elif self.survivalSelection == "truncation":
-            self.population = self.selectUnique(n=self.popSize, method="truncation")
+        elif self.survival_selection == "FPS":
+            self.population = self.select_unique(n=self.pop_size, method="FPS")
+        elif self.survival_selection == "uniform":
+            self.population = self.select_unique(n=self.pop_size, method="uniform")
+        elif self.survival_selection == "truncation":
+            self.population = self.select_unique(n=self.pop_size, method="truncation")
         else:
             raise NameError(
-                f"unrecognized survival selection method: {self.survivalSelection}"
+                f"unrecognized survival selection method: {self.survival_selection}"
             )
 
     # TODO: implement more termination methods
-    def checkTermination(self):
-        return self.evalLimit is not None and self.evals >= self.evalLimit
+    def check_termination(self):
+        """
+        Checks if the termination condition has been met
 
-    def updateHallOfFame(self):
-        bestIndividual = 0
-        bestFitness = self.population[bestIndividual].fitness
+        Returns:
+            bool: True if the termination condition has been met, False otherwise
+        """
+        return self.eval_limit is not None and self.evals >= self.eval_limit
+
+    def update_hall_of_fame(self):
+        """
+        Updates the hall of fame with the best individual in the population
+        """
+        best_individual = 0
+        best_fitness = self.population[best_individual].fitness
 
         for i in range(len(self.population)):
-            if self.population[i].fitness > bestFitness:
-                bestIndividual = i
-        key = self.population[bestIndividual].genotype.string
+            if self.population[i].fitness > best_fitness:
+                best_individual = i
+        key = self.population[best_individual].genotype.string
         self.CIAO.append(key)
-        if key in self.hallOfFame:
-            self.hallOfFame.move_to_end(key)
+        if key in self.hall_of_fame:
+            self.hall_of_fame.move_to_end(key)
             return
         else:
-            self.hallOfFame[key] = self.population[bestIndividual].copy()
+            self.hall_of_fame[key] = self.population[best_individual].copy()
 
     # Selection of unique individuals for survival and migration
     # Note: this can probably be cleaned up and segmented in a better way (maybe with the decorator approach used in genotype)
-    def selectUnique(self, n, method="uniform", k=5):
+    def select_unique(self, n, method="uniform", k=5):
+        """
+        Selects n unique individuals from the population
+
+        Args:
+            n: Number of individuals to select
+            method: Selection method to use. Defaults to "uniform".
+            k: Number of participants in kTournament selection. Defaults to 5.
+
+        Raises:
+            NameError: If the selection method is unrecognized
+
+        Returns:
+            List of unique individuals
+        """
+
         # Definition of selection methods
-        def uniformRandom(population, n):
+        def uniform_random(population, n):
             return random.sample(population, n)
 
-        def kTournament(population, n, k):
+        def k_tournament(population, n, k):
             candidates = {index for index in range(len(population))}
             winners = []
             for i in range(n):
                 participants = random.sample(list(candidates), k)
                 best = max(
-                    [population[participant].fitness for participant in participants]
+                    population[participant].fitness for participant in participants
                 )
                 champion = random.choice(
                     [
@@ -261,9 +326,9 @@ class GeneticProgrammingPopulation:
                 winners.append(champion)
             return [population[survivor] for survivor in winners]
 
-        def fitnessProportionalSelection(population, n):
+        def fitness_proportional_selection(population, n):
             offset = (
-                min([individual.fitness for individual in population]) * 1.1
+                min(individual.fitness for individual in population) * 1.1
             )  # multiply the min offset by 10% so the least fit individual isn't guaranteed to die
             if offset == 0:
                 offset = (
@@ -290,7 +355,7 @@ class GeneticProgrammingPopulation:
                 population, key=lambda individual: individual.fitness, reverse=True
             )[:n]
 
-        def normalSelection(population, n):
+        def normal_selection(population, n):
             candidates = {index for index in range(len(population))}
             winners = []
             for i in range(n):
@@ -317,22 +382,26 @@ class GeneticProgrammingPopulation:
             return
 
         if method == "tournament":
-            return kTournament(self.population, n, k)
-        elif method == "FPS":
-            return fitnessProportionalSelection(self.population, n)
-        elif method == "uniform" or method == "random":
-            return uniformRandom(self.population, n)
-        elif method == "normal":
-            return normalSelection(self.population, n)
-        else:
-            if method != "truncation" and method != "best":
-                print(
-                    f"unknown survival selection parameter '{method}' defaulting to truncation"
-                )
-            return truncation(self.population, n)
+            return k_tournament(self.population, n, k)
+        if method == "FPS":
+            return fitness_proportional_selection(self.population, n)
+        if method == "uniform" or method == "random":
+            return uniform_random(self.population, n)
+        if method == "normal":
+            return normal_selection(self.population, n)
+
+        if method != "truncation" and method != "best":
+            print(
+                f"unknown survival selection parameter '{method}' defaulting to truncation"
+            )
+        return truncation(self.population, n)
 
     def build(self):
-        [ind.build() for individual in self.population]
+        """Builds the population by calling the build method of each individual"""
+        for individual in self.population:
+            individual.build()
 
     def clean(self):
-        [ind.clean() for individual in self.population]
+        """Cleans the population by calling the clean method of each individual"""
+        for individual in self.population:
+            individual.clean()
