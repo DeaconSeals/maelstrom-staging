@@ -1,15 +1,16 @@
 """
 Maelstrom Framework
 High-level guiding principles:
-	+ Classes are defined hierarchically and rely on wrapper/interface
-        functions to interact down the hierarchy
-	+ Fitness evaluation is implemented as an external function and the
-        function itself it passed to the island
-	- Fitness evaluations are expected to accept named
-            GeneticProgrammingPopulation objects as input and assign fitness to the individuals
-	+ This file is agnostic of the nodes used in evolution
-	+ This framework is designed with coevolution in mind, but one could easily
-        use a single-population island with an appropriate fitness function
+- Classes are defined hierarchically and rely on wrapper/interface
+functions to interact down the hierarchy
+- Fitness evaluation is implemented as an external function and the
+function itself it passed to the island
+- Fitness evaluations are expected to accept named
+GeneticProgrammingPopulation objects as input and assign fitness to the individuals
+- This file is agnostic of the nodes used in evolution
+- This framework is designed with coevolution in mind, but one could easily
+use a single-population island with an appropriate fitness function
+
 """
 
 import multiprocessing
