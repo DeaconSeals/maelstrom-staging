@@ -13,7 +13,7 @@ class GeneticProgrammingIsland:
         self,
         populations,
         evaluation_function,
-        evaluationkwargs={},
+        evaluation_kwargs={},
         eval_pool=None,
         evaluations=None,
         champions_per_generation=0,
@@ -33,7 +33,7 @@ class GeneticProgrammingIsland:
             self.populations[name].ramped_half_and_half()
         self.evaluation = evaluation_function
 
-        self.evaluation_parameters = evaluationkwargs
+        self.evaluation_parameters = evaluation_kwargs
 
         self.log = {}
 
