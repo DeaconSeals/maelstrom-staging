@@ -29,6 +29,7 @@ class GeneticProgrammingPopulation:
         survival_selection="truncation",
         survival_strategy="plus",
         mutation=0.05,
+        genotype=GeneticTree,
         **kwargs,
     ):
         """
@@ -39,6 +40,7 @@ class GeneticProgrammingPopulation:
         # self.parameters = parameters
         self.pop_size = pop_size
         self.num_children = num_children
+        self.genotype = genotype
         self.roles = roles
         self.output_type = output_type
         self.depth_limit = depth_limit
@@ -64,17 +66,17 @@ class GeneticProgrammingPopulation:
 
         full = self.pop_size // 2
         self.population = [
-            GeneticProgrammingIndividual(GeneticTree(self.roles, self.output_type))
+            self.genotype(self.roles, self.output_type)
             for _ in range(self.pop_size)
         ]
 
         for index in range(len(self.population)):
             if index < full:
-                self.population[index].genotype.initialize(
+                self.population[index].initialize(
                     self.depth_limit, self.hard_limit, full=True
                 )
             else:
-                self.population[index].genotype.initialize(
+                self.population[index].initialize(
                     self.depth_min + (index % (self.depth_limit + 1 - self.depth_min)),
                     self.hard_limit,
                     grow=True,
@@ -212,15 +214,15 @@ class GeneticProgrammingPopulation:
         children = [parent.copy() for parent in parents]
         for i in range(len(children)):
             if random.random() <= self.mutation:
-                children[i].genotype.subtree_mutation()
+                children[i].subtree_mutation()
             else:
-                children[i].genotype.subtree_recombination(
-                    children[(i + 1) % len(children)].genotype
+                children[i].subtree_recombination(
+                    children[(i + 1) % len(children)]
                 )
-                while children[i].genotype.depth > self.hard_limit:
+                while children[i].depth > self.hard_limit:
                     children[i] = parents[i].copy()
-                    children[i].genotype.subtree_recombination(
-                        children[(i + 1) % len(children)].genotype
+                    children[i].subtree_recombination(
+                        children[(i + 1) % len(children)]
                     )
 
         if imports != None:
@@ -277,7 +279,7 @@ class GeneticProgrammingPopulation:
         for i in range(len(self.population)):
             if self.population[i].fitness > best_fitness:
                 best_individual = i
-        key = self.population[best_individual].genotype.string
+        key = self.population[best_individual].string
         self.CIAO.append(key)
         if key in self.hall_of_fame:
             self.hall_of_fame.move_to_end(key)

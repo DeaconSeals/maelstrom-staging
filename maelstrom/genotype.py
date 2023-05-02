@@ -116,6 +116,7 @@ class GeneticTree:
         self.depth = 0
         self.size = 0
         self.func = None
+        self.fitness=None
 
     def initialize(self, depth=1, hard_limit=0, grow=False, leaf_prob=0.5, full=False):
         """

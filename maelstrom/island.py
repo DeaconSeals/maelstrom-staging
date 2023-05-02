@@ -59,9 +59,9 @@ class GeneticProgrammingIsland:
                 population, self.champions_per_generation, method="best"
             )
             for individual in local_champions:
-                gene_text = individual.genotype.print_tree()
+                gene_text = individual.print_tree()
                 if gene_text not in self.champions[population]:
-                    self.champions[population][gene_text] = individual.genotype.copy()
+                    self.champions[population][gene_text] = individual.copy()
 
         self.imports = {}
         self.eval_limit = evaluations
@@ -101,9 +101,9 @@ class GeneticProgrammingIsland:
                 population, self.champions_per_generation, method="best"
             )
             for individual in local_champions:
-                gene_text = individual.genotype.print_tree()
+                gene_text = individual.print_tree()
                 if gene_text not in self.champions[population]:
-                    self.champions[population][gene_text] = individual.genotype.copy()
+                    self.champions[population][gene_text] = individual.copy()
 
         return self
 
