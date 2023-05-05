@@ -6,7 +6,7 @@ import math
 import statistics
 from collections import OrderedDict
 from maelstrom.genotype import GeneticTree
-from maelstrom.individual import GeneticProgrammingIndividual
+# from maelstrom.individual import GeneticProgrammingIndividual
 
 
 # TODO: transition from parameters dictionary to clearer inputs with default values
@@ -82,6 +82,8 @@ class GeneticProgrammingPopulation:
                     grow=True,
                     leaf_prob=leaf_prob,
                 )
+    def initialization(self, *args, **kwargs):
+        self.ramped_half_and_half(*args, **kwargs)
 
     def select_parents(self, num_parents=None):
         """

@@ -14,6 +14,8 @@ class GeneticProgrammingIsland:
         populations,
         evaluation_function,
         evaluation_kwargs={},
+        population_class=GeneticProgrammingPopulation,
+        initialization_kwargs={},
         eval_pool=None,
         evaluations=None,
         champions_per_generation=0,
@@ -29,8 +31,8 @@ class GeneticProgrammingIsland:
         self.populations = {}
         self.generation_count = 0
         for name, config in populations.items():
-            self.populations[name] = GeneticProgrammingPopulation(**kwargs[config])
-            self.populations[name].ramped_half_and_half()
+            self.populations[name] = population_class(**kwargs[config])
+            self.populations[name].initialization(**initialization_kwargs)
         self.evaluation = evaluation_function
 
         self.evaluation_parameters = evaluation_kwargs
