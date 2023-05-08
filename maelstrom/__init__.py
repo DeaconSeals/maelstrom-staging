@@ -29,6 +29,7 @@ class Maelstrom:
     def __init__(
         self,
         islands: dict,
+        island_class=GeneticProgrammingIsland,
         # TODO: do we really want this to default to None instead of a #?
         evaluations=None,
         # TODO: do we want to default this to None instead of throwing err?
@@ -49,6 +50,7 @@ class Maelstrom:
             **kwargs: keyword arguments to pass to island initialization
         """
         self.islands = {}
+        self.island_class = island_class
         self.migration_edges = migration_edges
         self.evals = 0
         self.eval_limit = evaluations
@@ -61,7 +63,7 @@ class Maelstrom:
 
         # Initialize islands
         for key in islands:
-            self.islands[key] = GeneticProgrammingIsland(
+            self.islands[key] = self.island_class(
                 cores=self.cores, **kwargs[islands[key]], **kwargs
             )
         self.evals = sum(island.evals for island in self.islands.values())
@@ -120,7 +122,7 @@ class Maelstrom:
                     # Evolve one full generation with each island
                     with multiprocessing.pool.ThreadPool() as executor:
                         executor.starmap(
-                            GeneticProgrammingIsland.generation,
+                            self.island_class.generation,
                             [(island, eval_pool) for island in self.islands.values()],
                         )
                     self.evals = sum(island.evals for island in self.islands.values())

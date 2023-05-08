@@ -14,6 +14,8 @@ class GeneticProgrammingIsland:
         populations,
         evaluation_function,
         evaluation_kwargs={},
+        population_class=GeneticProgrammingPopulation,
+        initialization_kwargs={},
         eval_pool=None,
         evaluations=None,
         champions_per_generation=0,
@@ -29,8 +31,8 @@ class GeneticProgrammingIsland:
         self.populations = {}
         self.generation_count = 0
         for name, config in populations.items():
-            self.populations[name] = GeneticProgrammingPopulation(**kwargs[config])
-            self.populations[name].ramped_half_and_half()
+            self.populations[name] = population_class(**kwargs[config])
+            self.populations[name].initialization(**initialization_kwargs)
         self.evaluation = evaluation_function
 
         self.evaluation_parameters = evaluation_kwargs
@@ -59,9 +61,9 @@ class GeneticProgrammingIsland:
                 population, self.champions_per_generation, method="best"
             )
             for individual in local_champions:
-                gene_text = individual.genotype.print_tree()
+                gene_text = individual.print_tree()
                 if gene_text not in self.champions[population]:
-                    self.champions[population][gene_text] = individual.genotype.copy()
+                    self.champions[population][gene_text] = individual.copy()
 
         self.imports = {}
         self.eval_limit = evaluations
@@ -101,9 +103,9 @@ class GeneticProgrammingIsland:
                 population, self.champions_per_generation, method="best"
             )
             for individual in local_champions:
-                gene_text = individual.genotype.print_tree()
+                gene_text = individual.print_tree()
                 if gene_text not in self.champions[population]:
-                    self.champions[population][gene_text] = individual.genotype.copy()
+                    self.champions[population][gene_text] = individual.copy()
 
         return self
 
